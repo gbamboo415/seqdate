@@ -7,10 +7,11 @@
 #include <string.h>
 #include <time.h>
 
-#define INDIVIDUAL_ARG_MAX_LENGTH   64		  // 日付表現文字列の最大長
-#define SECONDS_PER_DAY             60*60*24
+#define INDIVIDUAL_ARG_MAX_LENGTH       64		  // 日付表現文字列の最大長
+#define YEAR_MONTH_DAY_STRING_MAX_LEN   16
+#define SECONDS_PER_DAY                 60*60*24
 
-struct tm parse_datestring(const char *datestr);
+struct tm parse_datestring(char *datestr);
 
 int main(int argc, char *argv[]) {
 	char inputtext_startdate[INDIVIDUAL_ARG_MAX_LENGTH + 1], inputtext_enddate[INDIVIDUAL_ARG_MAX_LENGTH + 1];
@@ -59,37 +60,41 @@ int main(int argc, char *argv[]) {
 	return EXIT_SUCCESS;
 }
 
-struct tm parse_datestring(const char *datestr) {
-	char       str_year[16], str_month[8], str_day[8];
+struct tm parse_datestring(char *datestr) {
+	char       *str_year, *str_month, *str_day;
 	int        year, month, day;
-	struct tm *tm_today;
 	struct tm  tm_ret;
-	time_t     tt_today;
+	int        is_memory_allocated = 0;
 
-	// デフォルト値設定のため、今日の日付を求める
-	tt_today = time(NULL);
-	tm_today = localtime(&tt_today);
+	// 最初に日付文字列を区切り文字列で分割できないか試す
+	if ((strchr(datestr, '/') == NULL) && (strchr(datestr, '-') == NULL)) {
+		// 区切り文字が見つからない場合、yyyymmdd形式とみなす
+		// メモリ領域を確保
+		str_year  = (char *)malloc(sizeof(char) * YEAR_MONTH_DAY_STRING_MAX_LEN);
+		str_month = (char *)malloc(sizeof(char) * YEAR_MONTH_DAY_STRING_MAX_LEN);
+		str_day   = (char *)malloc(sizeof(char) * YEAR_MONTH_DAY_STRING_MAX_LEN);
+		if ((str_year == NULL) || (str_month == NULL) || (str_day == NULL)) {
+			fputs("Error: メモリ確保に失敗しました。\n", stderr);
 
-	year  = tm_today->tm_year + 1900;
-	month = tm_today->tm_mon  + 1;
-	day   = tm_today->tm_mday;
+			free(str_year);
+			free(str_month);
+			free(str_day);
 
+			exit(EXIT_FAILURE);
+		}
+		is_memory_allocated = 1;
 
-	switch((int)strlen(datestr)) {
-		case  8:	// yyyymmdd
+		// 念のため文字数をチェック
+		if ((int)strlen(datestr) == 8) {
 			strncpy(str_year,  &datestr[0], 4);
 			strncpy(str_month, &datestr[4], 2);
 			strncpy(str_day,   &datestr[6], 2);
-			break;
-
-		case 10:	// yyyy/mm/dd
-			strncpy(str_year,  &datestr[0], 4);
-			strncpy(str_month, &datestr[5], 2);
-			strncpy(str_day,   &datestr[8], 2);
-			break;
-
-		default:	// それ以外はデフォルトで今日の日付とする
-			break;
+		}
+	} else {
+		// 区切り文字が存在するので、区切り文字で日付文字列を分割する
+		str_year  = strtok(datestr, "/-");
+		str_month = strtok(NULL, "/-");
+		str_day   = strtok(NULL, "/-");
 	}
 
 	year  = atoi(str_year);
@@ -105,6 +110,13 @@ struct tm parse_datestring(const char *datestr) {
 	tm_ret.tm_sec  = 0;
 	tm_ret.tm_yday = 0;
 	tm_ret.tm_isdst   = 0;
+
+	// yyyymmdd形式で分割した場合に限り、動的に確保したメモリを解放
+	if (is_memory_allocated == 1) {
+		free(str_year);
+		free(str_month);
+		free(str_day);
+	}
 
 	return tm_ret;
 }
