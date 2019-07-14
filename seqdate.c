@@ -65,15 +65,18 @@ struct tm parse_datestring(char *datestr) {
 	int        year, month, day;
 	struct tm  tm_ret;
 
-	// まず、区切り文字「/」を試す
-	if (sscanf(datestr, "%d/%d/%d", &year, &month, &day) != 3) {
-		// 続いて、区切り文字「-」を試す
-		if (sscanf(datestr, "%d-%d-%d", &year, &month, &day) != 3) {
-			// 最後に、yyyymmdd形式を試す
-			if (sscanf(datestr, "%4d%2d%2d", &year, &month, &day) != 3) {
-				year = month = day = 0;
-			}
-		}
+	if (sscanf(datestr, "%d/%d/%d", &year, &month, &day) == 3) {
+		// 試行: 区切り文字「/」による分割
+		;
+	} else if (sscanf(datestr, "%d-%d-%d", &year, &month, &day) == 3) {
+		// 試行: 区切り文字「-」による分割
+		;
+	} else if (sscanf(datestr, "%4d%2d%2d", &year, &month, &day) == 3) {
+		// 試行: yyyymmdd形式
+		;
+	} else {
+		// デフォルト値は全0
+		year = month = day = 0;
 	}
 
 	tm_ret.tm_year = year  - 1900;
