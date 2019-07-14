@@ -64,42 +64,17 @@ struct tm parse_datestring(char *datestr) {
 	char       *str_year, *str_month, *str_day;
 	int        year, month, day;
 	struct tm  tm_ret;
-	int        is_memory_allocated = 0;
 
-	// 最初に日付文字列を区切り文字列で分割できないか試す
-	if ((strchr(datestr, '/') == NULL) && (strchr(datestr, '-') == NULL)) {
-		// 区切り文字が見つからない場合、yyyymmdd形式とみなす
-		// メモリ領域を確保
-		str_year  = (char *)malloc(sizeof(char) * YEAR_MONTH_DAY_STRING_MAX_LEN);
-		str_month = (char *)malloc(sizeof(char) * YEAR_MONTH_DAY_STRING_MAX_LEN);
-		str_day   = (char *)malloc(sizeof(char) * YEAR_MONTH_DAY_STRING_MAX_LEN);
-		if ((str_year == NULL) || (str_month == NULL) || (str_day == NULL)) {
-			fputs("Error: メモリ確保に失敗しました。\n", stderr);
-
-			free(str_year);
-			free(str_month);
-			free(str_day);
-
-			exit(EXIT_FAILURE);
+	// まず、区切り文字「/」を試す
+	if (sscanf(datestr, "%d/%d/%d", &year, &month, &day) != 3) {
+		// 続いて、区切り文字「-」を試す
+		if (sscanf(datestr, "%d-%d-%d", &year, &month, &day) != 3) {
+			// 最後に、yyyymmdd形式を試す
+			if (sscanf(datestr, "%4d%2d%2d", &year, &month, &day) != 3) {
+				year = month = day = 0;
+			}
 		}
-		is_memory_allocated = 1;
-
-		// 念のため文字数をチェック
-		if ((int)strlen(datestr) == 8) {
-			strncpy(str_year,  &datestr[0], 4);
-			strncpy(str_month, &datestr[4], 2);
-			strncpy(str_day,   &datestr[6], 2);
-		}
-	} else {
-		// 区切り文字が存在するので、区切り文字で日付文字列を分割する
-		str_year  = strtok(datestr, "/-");
-		str_month = strtok(NULL, "/-");
-		str_day   = strtok(NULL, "/-");
 	}
-
-	year  = atoi(str_year);
-	month = atoi(str_month);
-	day   = atoi(str_day);
 
 	tm_ret.tm_year = year  - 1900;
 	tm_ret.tm_mon  = month - 1;
@@ -110,13 +85,6 @@ struct tm parse_datestring(char *datestr) {
 	tm_ret.tm_sec  = 0;
 	tm_ret.tm_yday = 0;
 	tm_ret.tm_isdst   = 0;
-
-	// yyyymmdd形式で分割した場合に限り、動的に確保したメモリを解放
-	if (is_memory_allocated == 1) {
-		free(str_year);
-		free(str_month);
-		free(str_day);
-	}
 
 	return tm_ret;
 }
